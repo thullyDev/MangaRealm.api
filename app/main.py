@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
-origins = ORIGINS.split(",")
+origins = ["*"]
+# origins = ORIGINS.split(",")
 
 app.add_middleware(
     CORSMiddleware,

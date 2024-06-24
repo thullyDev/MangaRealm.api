@@ -3,19 +3,10 @@ from typing import Any, Optional, Tuple, Union
 
 #! please use this is order when initializing using a tuple, or else the attributes wont match
 
-class BaseUser:
-	def entities_to_tuple(self) -> Tuple[
-			 int,
-			 str,
-			 str,
-			 str,
-			 bool,
-			 datetime,
-			 Optional[str],
-			 Optional[str]
-		]:
-		return tuple(vars(self).values())
 
+class Base:
+	def entities_to_tuple(self) -> Tuple:
+		return tuple(vars(self).values())
 
 	def keys_to_tuple(self, as_strings=False) -> Tuple[str, ...]:
 		return tuple(self.__dict__.keys()) 
@@ -29,7 +20,7 @@ class BaseUser:
 
 		raise Exception(f"no such type: {type}, try keys or entities")
 
-class User(BaseUser):
+class User(Base):
 	def __init__(self, user: Tuple[
 			int,
 			str,
@@ -48,10 +39,17 @@ class User(BaseUser):
 		self.profile_image_url: Optional[str] = user[6]
 		self.token: Optional[str] = user[7]
 
-class SetUser(BaseUser):
+class SetUser(Base):
 	def __init__(self, user: Tuple[str, ...]):
 		self.username: str = user[0]
 		self.email: str = user[1]
 		self.password: str = user[2]
 		self.token: str = user[3]
+
+class SetList(Base):
+	def __init__(self, data: Tuple[str, ...]):
+		self.useremail: str = data[0]
+		self.slug: str = data[1]
+		self.title: str = data[2]
+		self.image_url: str = data[3]
 
