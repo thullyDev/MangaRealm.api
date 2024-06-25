@@ -26,6 +26,8 @@ def add_to_list(email: str, slug: str) -> JSONResponse:
 
 	manga = get_manga(slug)
 
+	print(manga)
+
 	if not manga:
 		return response.bad_request_response(data={ "message": "invalid manga" })
 
