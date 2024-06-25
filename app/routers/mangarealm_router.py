@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from app.database import database
@@ -7,6 +7,7 @@ from app.handlers import response_handler as response
 from app.database.cache import cache 
 import requests
 import pprint
+import ast
 
 from app.resources.config import MANGANATO_API_URL
 from app.resources.errors import SUCCESSFUL
@@ -26,8 +27,6 @@ def add_to_list(email: str, slug: str) -> JSONResponse:
 
 	manga = get_manga(slug)
 
-	print(manga)
-
 	if not manga:
 		return response.bad_request_response(data={ "message": "invalid manga" })
 
@@ -46,6 +45,42 @@ def add_to_list(email: str, slug: str) -> JSONResponse:
 
 	return response.successful_response(data={ "message": "added to list" })
 
+@router.post("/change_user_data")
+def change_user_data(email: str, data: str) -> JSONResponse:
+	attributes: List[Dict[str, Union[str, bool]]] = ast.literal_eval(data.strip("'"))
+	isvalid, isvalid_msg = valid_keys(attributes)
+
+	if not isvalid:
+		return response.forbidden_response(data={ "message": isvalid_msg })
+
+	user = database.get_user(key="email", entity=email)
+
+	if not user:
+		return response.forbidden_response(data={ "message": "invalid user"}) 
+
+	res = update_data(attributes, key="email", entity=email)
+
+	if not res:
+		return response.crash_response(data={ "message": "failed" })
+
+	return response.successful_response(data={ "message": "updated" })
+
+def valid_keys(attributes):
+	keys = [ "email", "profile_image_url", "username", "password" "deleted" ]
+
+	for item in attributes:
+		key = item["key"]
+		value = item["value"]
+
+		if key not in keys:
+			return False, "forbidden"
+
+		if key == "password":
+			if len(password) < 10:
+				return False, "password should have atleast 10 characters" 
+
+	return True, ""
+
 def get_manga(slug: str) -> Optional[Dict[str, Any]]:
 	url = f"{MANGANATO_API_URL}/{slug}"
 	response = requests.get(url)
@@ -54,3 +89,7 @@ def get_manga(slug: str) -> Optional[Dict[str, Any]]:
 		return None
 
 	return response.json()["data"]["manga"]
+
+def update_data(attributes: List[ Dict[str, Union[str, bool]]], **kwargs) -> bool:
+	data: List[tuple[str, Any]] = [(item["key"], item["value"]) for item in attributes]
+	return database.update_user(data=data, **kwargs)
