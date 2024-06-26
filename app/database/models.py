@@ -46,10 +46,21 @@ class SetUser(Base):
 		self.password: str = user[2]
 		self.token: str = user[3]
 
+class AddList(Base):
+	def __init__(self, data: Tuple[str, ...]):
+		self.id: str = data[0]
+		self.useremail: str = data[1]
+		self.slug: str = data[2]
+		self.title: str = data[3]
+		self.created_at: str = data[4]
+		self.image_url: str = data[5]
+
+
 class SetList(Base):
 	def __init__(self, data: Tuple[str, ...]):
 		self.useremail: str = data[0]
 		self.slug: str = data[1]
 		self.title: str = data[2]
 		self.image_url: str = data[3]
+
 

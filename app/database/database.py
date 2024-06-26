@@ -1,5 +1,7 @@
-from typing import Any, Dict, List, Optional, Tuple
-from app.database.models import Base, SetUser, User, SetList
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from fastapi import responses
+from app.database.models import AddList, Base, SetUser, User, SetList
 from app.resources.config import SQL_URL
 from .sequel.postgresDatabase import PostgresDB 
 
@@ -15,6 +17,15 @@ def update_user(*, key: str, entity: str, data: List[tuple[str, Any]]) -> bool:
 			""".strip()
 	return psqlDB.execute(query)
 	
+def get_list_items(*, key: str, entity: str) -> List[AddList]:
+	query = f"select * from \"list\" where {key} = '{entity}';"
+	response = psqlDB.fetch(query=query)
+
+	if not response:
+		return []
+
+	return [AddList(item) for item in response]
+
 def get_user(*, key: str, entity: str) -> Optional[User]:
 	query = f"select * from \"user\" where {key} = '{entity}';"
 	response = psqlDB.fetch(query=query)

@@ -4,20 +4,35 @@ from fastapi.responses import JSONResponse
 from app.database import database
 from app.database.models import SetList
 from app.handlers import response_handler as response, storage
-from app.database.cache import cache 
+# from app.database.cache import cache 
+from app.resources.config import MANGANATO_API_URL
+from app.resources.errors import SUCCESSFUL
 import requests
-import pprint
 import ast
 import datetime
 
-from app.resources.config import MANGANATO_API_URL
-from app.resources.errors import SUCCESSFUL
-
 router: APIRouter = APIRouter(prefix="/api")
 
-# @router.post("/profile_details/")
-# def profile_details(email: str) -> JSONResponse:
-# 	return response.successful_response(data={ "message": "" })
+@router.get("/profile_details/")
+def profile_details(email: str, list_page: str = "1") -> JSONResponse:
+	user = database.get_user(key="email", entity=email)
+
+	if not user:
+		return response.forbidden_response(data={ "message": "invalid user"})
+
+	profile_data = get_profile_data(user)
+	return response.successful_response(data={ "message": "", "data": profile_data })
+
+def get_profile_data(user):
+	data = database.get_list_items(key="useremail", entity=user.email)
+
+	for item in data:
+		item.__dict__
+
+	return {
+		"profile": {},
+		"list": []
+	}
 
 @router.post("/add_to_list")
 def add_to_list(email: str, slug: str) -> JSONResponse:
@@ -83,6 +98,7 @@ def change_user_info(email: str, data: str) -> JSONResponse:
 
 @router.post("/upload_user_profile_image")
 def upload_user_profile_image(email: str, image: str) -> JSONResponse:
+	#! image should be a base64 image
 	user = database.get_user(key="email", entity=email)
 
 	if not user:
@@ -137,4 +153,7 @@ def process_image(image: str, username: str):
 	current_time = datetime.datetime.now().strftime("%d-%m-%Y-%w-%d-%H-%M-%S-%f")
 	name = f"{username}-{current_time}"
 	return name, image.replace("data:image/jpeg;base64,", "").replace("data:image/png;base64,", "")
+
+
+
 
