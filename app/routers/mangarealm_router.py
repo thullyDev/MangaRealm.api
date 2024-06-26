@@ -19,7 +19,7 @@ router: APIRouter = APIRouter(prefix="/api")
 # def profile_details(email: str) -> JSONResponse:
 # 	return response.successful_response(data={ "message": "" })
 
-@router.post("/add_list")
+@router.post("/add_to_list")
 def add_to_list(email: str, slug: str) -> JSONResponse:
 	user = database.get_user(key="email", entity=email)
 
@@ -46,6 +46,21 @@ def add_to_list(email: str, slug: str) -> JSONResponse:
 
 	return response.successful_response(data={ "message": "added to list" })
 
+@router.post("/remove_from_list")
+def remove_from_list(email: str, slug: str) -> JSONResponse:
+	user = database.get_user(key="email", entity=email)
+
+	if not user:
+		return response.forbidden_response(data={ "message": "invalid user"}) 
+
+	conditions = [("useremail", email), ("slug", slug)]
+	res = database.remove_from_list(conditions=conditions)
+
+	if not res:
+		return response.crash_response(data={ "message": "failed to  remove from list, may already be in the list" })
+
+	return response.successful_response(data={ "message": "removed from list" })
+
 @router.post("/change_user_info")
 def change_user_info(email: str, data: str) -> JSONResponse:
 	attributes: List[Dict[str, Union[str, bool]]] = ast.literal_eval(data.strip("'"))
@@ -66,7 +81,7 @@ def change_user_info(email: str, data: str) -> JSONResponse:
 
 	return response.successful_response(data={ "message": "updated" })
 
-@router.get("/upload_user_profile_image")
+@router.post("/upload_user_profile_image")
 def upload_user_profile_image(email: str, image: str) -> JSONResponse:
 	user = database.get_user(key="email", entity=email)
 
@@ -86,7 +101,6 @@ def upload_user_profile_image(email: str, image: str) -> JSONResponse:
 		return response.crash_response(data={ "message": "failed" })
 
 	return response.successful_response(data={ "message": "updated" })
-
 
 def valid_keys(attributes: List[Dict[str, Any]]) -> Tuple[bool, str]:
 	keys = [ "email", "profile_image_url", "username", "password" "deleted" ]
