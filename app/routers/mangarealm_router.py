@@ -1,25 +1,39 @@
+import ast
+import uuid
+import hashlib
+import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
-from fastapi import APIRouter
+
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+import requests
+
 from app.database import database
-from app.database.models import SetList
+from app.database.models import SetList, User
 from app.handlers import response_handler as response, storage
-# from app.database.cache import cache 
 from app.resources.config import MANGANATO_API_URL
 from app.resources.errors import SUCCESSFUL
-import requests
-import ast
-import datetime
 
 router: APIRouter = APIRouter(prefix="/api")
 
-@router.get("/profile_details/")
-def profile_details(email: str, list_page: str = "1") -> JSONResponse:
+
+def validator(*, request: Request, callnext) -> JSONResponse:
+# 	auth_token = request.headers.get("auth_token")
+
+# 	if not auth_token:
+# 		return response.forbidden_response(data={ "message": "bad auth_token" })
+	
+	email = "testuser@example.com" 
 	user = database.get_user(key="email", entity=email)
 
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid user"})
 
+	return callnext(request, user=user)
+
+
+@router.get("/profile_details/")
+def profile_details(email: str, list_page: str = "1", user: User) -> JSONResponse:
 	profile_data = get_profile_data(user)
 	return response.successful_response(data={ "message": "", "data": profile_data })
 
@@ -40,12 +54,7 @@ def get_profile_data(user):
 	}
 
 @router.post("/add_to_list")
-def add_to_list(email: str, slug: str) -> JSONResponse:
-	user = database.get_user(key="email", entity=email)
-
-	if not user:
-		return response.forbidden_response(data={ "message": "invalid user"}) 
-
+def add_to_list(email: str, slug: str, user: User) -> JSONResponse:
 	manga = get_manga(slug)
 
 	if not manga:
@@ -67,12 +76,7 @@ def add_to_list(email: str, slug: str) -> JSONResponse:
 	return response.successful_response(data={ "message": "added to list" })
 
 @router.post("/remove_from_list")
-def remove_from_list(email: str, slug: str) -> JSONResponse:
-	user = database.get_user(key="email", entity=email)
-
-	if not user:
-		return response.forbidden_response(data={ "message": "invalid user"}) 
-
+def remove_from_list(email: str, slug: str, user: User) -> JSONResponse:
 	conditions = [("useremail", email), ("slug", slug)]
 	res = database.remove_from_list(conditions=conditions)
 
@@ -82,17 +86,12 @@ def remove_from_list(email: str, slug: str) -> JSONResponse:
 	return response.successful_response(data={ "message": "removed from list" })
 
 @router.post("/change_user_info")
-def change_user_info(email: str, data: str) -> JSONResponse:
+def change_user_info(email: str, data: str, user: User) -> JSONResponse:
 	attributes: List[Dict[str, Union[str, bool]]] = ast.literal_eval(data.strip("'"))
 	isvalid, isvalid_msg = valid_keys(attributes)
 
 	if not isvalid:
 		return response.forbidden_response(data={ "message": isvalid_msg })
-
-	user = database.get_user(key="email", entity=email)
-
-	if not user:
-		return response.forbidden_response(data={ "message": "invalid user"}) 
 
 	res = update_data(attributes, key="email", entity=email)
 
@@ -102,13 +101,8 @@ def change_user_info(email: str, data: str) -> JSONResponse:
 	return response.successful_response(data={ "message": "updated" })
 
 @router.post("/upload_user_profile_image")
-def upload_user_profile_image(email: str, image: str) -> JSONResponse:
+def upload_user_profile_image(email: str, image: str, user: User) -> JSONResponse:
 	#! image should be a base64 image
-	user = database.get_user(key="email", entity=email)
-
-	if not user:
-		return response.forbidden_response(data={ "message": "invalid user"})
-
 	name, base64 = process_image(image, user.username)
 	profile_image_url = storage.upload_base64_image(name=name, base64Str=base64)
 
@@ -159,6 +153,14 @@ def process_image(image: str, username: str):
 	name = f"{username}-{current_time}"
 	return name, image.replace("data:image/jpeg;base64,", "").replace("data:image/png;base64,", "")
 
-
-
+def generate_unique_token(length: int = 250) -> str:
+	random_uuid = uuid.uuid4()
+	uuid_bytes = random_uuid.bytes
+	hashed_token = hashlib.sha256(uuid_bytes).hexdigest()
+	while len(hashed_token) < length:
+		hashed_token += hashlib.sha256(hashed_token.encode()).hexdigest()
+	
+	hashed_token = hashed_token[:length]
+	
+	return hashed_token
 
