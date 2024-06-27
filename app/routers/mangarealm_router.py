@@ -25,13 +25,18 @@ def profile_details(email: str, list_page: str = "1") -> JSONResponse:
 
 def get_profile_data(user):
 	data = database.get_list_items(key="useremail", entity=user.email)
+	items = []
+	user_data = user.__dict__
+	del user_data["password"]
+	del user_data["token"]
 
 	for item in data:
-		item.__dict__
-
+		item.created_at = str(item.created_at)
+		items.append(item.__dict__)
+		
 	return {
-		"profile": {},
-		"list": []
+		"profile": user_data,
+		"list": items,
 	}
 
 @router.post("/add_to_list")
