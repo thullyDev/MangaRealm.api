@@ -1,4 +1,5 @@
 import ast
+from urllib.parse import parse_qs, urlparse
 import uuid
 import hashlib
 import datetime
@@ -13,32 +14,58 @@ from app.database.models import SetList, User
 from app.handlers import response_handler as response, storage
 from app.resources.config import MANGANATO_API_URL
 from app.resources.errors import SUCCESSFUL
+from app.resources.misc import paginate_items
 
 router: APIRouter = APIRouter(prefix="/api")
 
 
 def validator(*, request: Request, callnext) -> JSONResponse:
-# 	auth_token = request.headers.get("auth_token")
+	auth_token = request.headers.get("auth_token")
 
-# 	if not auth_token:
-# 		return response.forbidden_response(data={ "message": "bad auth_token" })
-	
-	email = "testuser@example.com" 
+	if not auth_token:
+		return response.forbidden_response(data={ "message": "bad auth_token" })
+
+	parsed_url = urlparse(request.url._url)
+	query_params = parse_qs(parsed_url.query)
+	email = query_params.get('email', [None])[0]
+
+	if not email:
+		return response.bad_request_response()
+
 	user = database.get_user(key="email", entity=email)
-
+	
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid user"})
+	
+	if user.token != auth_token:
+		return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
+	
+	user.token = generate_unique_token()
+	res = database.update_user(data=[ ( "token", user.token) ], key="email", entity=email)
+	
+	if not res:
+		return response.crash_response(data={ "message": "the token updating failed" }) 
+	
+	request.headers["auth_token"] = user.token 
 
-	return callnext(request, user=user)
+	return callnext(request)
 
 
 @router.get("/profile_details/")
-def profile_details(email: str, list_page: str = "1", user: User) -> JSONResponse:
-	profile_data = get_profile_data(user)
-	return response.successful_response(data={ "message": "", "data": profile_data })
+def profile_details(request: Request, email: str, list_page: str = "1") -> JSONResponse:
+	page = "1"
 
-def get_profile_data(user):
-	data = database.get_list_items(key="useremail", entity=user.email)
+	try:
+		page = int(list_page) 
+	except Exception as e:
+		print(e)
+	
+	user = database.get_user(key="email", entity=email)
+	profile_data = get_profile_data(user, page=page)
+	return response.successful_response(data={ "message": "", "data": profile_data, "auth_token": request.headers.get("auth_token") })
+
+def get_profile_data(user, page):
+	data = paginate_items(data=database.get_list_items(key="useremail", entity=user.email), page=page, limit=20)
 	items = []
 	user_data = user.__dict__
 	del user_data["password"]
@@ -54,7 +81,7 @@ def get_profile_data(user):
 	}
 
 @router.post("/add_to_list")
-def add_to_list(email: str, slug: str, user: User) -> JSONResponse:
+def add_to_list(request: Request, email: str, slug: str) -> JSONResponse:
 	manga = get_manga(slug)
 
 	if not manga:
@@ -73,20 +100,20 @@ def add_to_list(email: str, slug: str, user: User) -> JSONResponse:
 	if not res:
 		return response.crash_response(data={ "message": "failed to add to list, may already be in the list" })
 
-	return response.successful_response(data={ "message": "added to list" })
+	return response.successful_response(data={ "message": "added to list", "auth_token": request.headers.get("auth_token") })
 
 @router.post("/remove_from_list")
-def remove_from_list(email: str, slug: str, user: User) -> JSONResponse:
+def remove_from_list(request: Request, email: str, slug: str) -> JSONResponse:
 	conditions = [("useremail", email), ("slug", slug)]
 	res = database.remove_from_list(conditions=conditions)
 
 	if not res:
 		return response.crash_response(data={ "message": "failed to  remove from list, may already be in the list" })
 
-	return response.successful_response(data={ "message": "removed from list" })
+	return response.successful_response(data={ "message": "removed from list", "auth_token": request.headers.get("auth_token") })
 
 @router.post("/change_user_info")
-def change_user_info(email: str, data: str, user: User) -> JSONResponse:
+def change_user_info(request: Request, email: str, data: str) -> JSONResponse:
 	attributes: List[Dict[str, Union[str, bool]]] = ast.literal_eval(data.strip("'"))
 	isvalid, isvalid_msg = valid_keys(attributes)
 
@@ -98,16 +125,16 @@ def change_user_info(email: str, data: str, user: User) -> JSONResponse:
 	if not res:
 		return response.crash_response(data={ "message": "failed" })
 
-	return response.successful_response(data={ "message": "updated" })
+	return response.successful_response(data={ "message": "updated", "auth_token": request.headers.get("auth_token") })
 
 @router.post("/upload_user_profile_image")
-def upload_user_profile_image(email: str, image: str, user: User) -> JSONResponse:
+def upload_user_profile_image(request: Request, user, email: str, image: str) -> JSONResponse:
 	#! image should be a base64 image
 	name, base64 = process_image(image, user.username)
 	profile_image_url = storage.upload_base64_image(name=name, base64Str=base64)
 
 	if not profile_image_url:
-		return response.crash_response(data={ "message": "failed to upload image" })
+		return response.crash_response(data={ "message": "failed to upload image", "auth_token": request.headers.get("auth_token") })
 
 	data = { "key": "profile_image_url", "value": profile_image_url }
 	res = update_data([ data ], key="email", entity=email)

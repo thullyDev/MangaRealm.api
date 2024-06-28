@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from app.routers import mangarealm_router 
 from fastapi.responses import JSONResponse
 from app.handlers import response_handler as response
@@ -17,6 +17,17 @@ app.add_middleware(
     allow_methods=["POST", "GET"],
     allow_headers=["Content-Type"],
 )
+
+def auth_middleware(request: Request, callnext):
+    url_path = request.url.path
+    temp = url_path.split("/")
+
+    if "api" in temp:
+        return mangarealm_router.validator(request=request, callnext=callnext) 
+
+    return callnext(request)
+
+app.middleware("http")(auth_middleware)
 
 @app.exception_handler(Exception)
 def unexpected_error_handler() -> JSONResponse:
