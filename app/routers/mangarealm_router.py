@@ -16,12 +16,14 @@ from app.resources.config import MANGANATO_API_URL
 from app.resources.errors import SUCCESSFUL
 from app.resources.misc import paginate_items
 
+
 router: APIRouter = APIRouter(prefix="/api")
 
 
-def validator(*, request: Request, callnext) -> JSONResponse:
-	auth_token = request.headers.get("auth_token")
-
+async def validator(*, request: Request, callnext) -> JSONResponse:
+	headers = request.headers
+	auth_token = headers.get("auth_token")
+	
 	if not auth_token:
 		return response.forbidden_response(data={ "message": "bad auth_token" })
 
@@ -37,8 +39,8 @@ def validator(*, request: Request, callnext) -> JSONResponse:
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid user"})
 	
-	if user.token != auth_token:
-		return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
+# 	if user.token != auth_token:
+# 		return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
 	
 	user.token = generate_unique_token()
 	res = database.update_user(data=[ ( "token", user.token) ], key="email", entity=email)
@@ -46,14 +48,14 @@ def validator(*, request: Request, callnext) -> JSONResponse:
 	if not res:
 		return response.crash_response(data={ "message": "the token updating failed" }) 
 	
-	request.headers["auth_token"] = user.token 
+	request.state.auth_token = user.token 
 
-	return callnext(request)
+	return await callnext(request)
 
 
-@router.get("/profile_details/")
+@router.post("/profile_details/")
 def profile_details(request: Request, email: str, list_page: str = "1") -> JSONResponse:
-	page = "1"
+	page = 1
 
 	try:
 		page = int(list_page) 
@@ -61,10 +63,18 @@ def profile_details(request: Request, email: str, list_page: str = "1") -> JSONR
 		print(e)
 	
 	user = database.get_user(key="email", entity=email)
-	profile_data = get_profile_data(user, page=page)
-	return response.successful_response(data={ "message": "", "data": profile_data, "auth_token": request.headers.get("auth_token") })
 
-def get_profile_data(user, page):
+	if not user:
+		return response.forbidden_response(data={ "message": "invalid email" })
+
+	profile_data = get_profile_data(user, page=page)
+	return response.successful_response(data={ 
+		"message": "", 
+		"data": profile_data, 
+		"auth_token": request.state.auth_token 
+	})
+
+def get_profile_data(user: User, page: int):
 	data = paginate_items(data=database.get_list_items(key="useremail", entity=user.email), page=page, limit=20)
 	items = []
 	user_data = user.__dict__
