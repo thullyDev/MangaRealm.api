@@ -24,6 +24,7 @@ async def validator(*, request: Request, callnext) -> JSONResponse:
 	headers = request.headers
 	auth_token = headers.get("auth_token")
 	
+
 	if not auth_token:
 		return response.forbidden_response(data={ "message": "bad auth_token" })
 
@@ -75,7 +76,7 @@ def profile_details(request: Request, email: str, list_page: str = "1") -> JSONR
 	})
 
 def get_profile_data(user: User, page: int):
-	data = paginate_items(data=database.get_list_items(key="useremail", entity=user.email), page=page, limit=20)
+	data, pagination = paginate_items(data=database.get_list_items(key="useremail", entity=user.email), page=page, limit=20)
 	items = []
 	user_data = user.__dict__
 	del user_data["password"]
@@ -88,6 +89,7 @@ def get_profile_data(user: User, page: int):
 	return {
 		"profile": user_data,
 		"list": items,
+		"pagination": pagination,
 	}
 
 @router.post("/add_to_list")
