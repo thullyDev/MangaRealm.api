@@ -79,9 +79,14 @@ def get_profile_data(user: User, page: int):
 	data, pagination = paginate_items(data=database.get_list_items(key="useremail", entity=user.email), page=page, limit=20)
 	items = []
 	user_data = user.__dict__
+
+	print("user ===> ", user_data)
+	
 	del user_data["password"]
 	del user_data["token"]
 
+	user_data["created_at"] = user_data["created_at"].strftime('%Y-%m-%d %H:%M:%S.%f')
+	
 	for item in data:
 		item.created_at = str(item.created_at)
 		items.append(item.__dict__)

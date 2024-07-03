@@ -36,6 +36,7 @@ class User(Base):
 		self.email: str = user[2]
 		self.password: str = user[3]
 		self.deleted: bool = user[4]
+		self.created_at: bool = user[5]
 		self.profile_image_url: Optional[str] = user[6]
 		self.token: Optional[str] = user[7]
 
