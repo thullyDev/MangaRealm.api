@@ -24,7 +24,6 @@ async def validator(*, request: Request, callnext) -> JSONResponse:
 	headers = request.headers
 	auth_token = headers.get("auth_token")
 	
-
 	if not auth_token:
 		return response.forbidden_response(data={ "message": "bad auth_token" })
 
@@ -40,8 +39,8 @@ async def validator(*, request: Request, callnext) -> JSONResponse:
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid user"})
 	
-# 	if user.token != auth_token:
-# 		return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
+	if user.token != auth_token:
+		return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
 	
 	user.token = generate_unique_token()
 	res = database.update_user(data=[ ( "token", user.token) ], key="email", entity=email)
@@ -114,10 +113,15 @@ def add_to_list(request: Request, email: str, slug: str) -> JSONResponse:
 	))
 	res = database.add_to_list(list=list_manga)
 
+	if type(res) is tuple:
+		conditions = [("useremail", email), ("slug", slug)]
+		database.remove_from_list(conditions=conditions)
+		return response.successful_response(data={ "message": "added to list", "auth_token": request.headers.get("auth_token"), "data": { "isAdded": False } })
+
 	if not res:
 		return response.crash_response(data={ "message": "failed to add to list, may already be in the list" })
-
-	return response.successful_response(data={ "message": "added to list", "auth_token": request.headers.get("auth_token") })
+	
+	return response.successful_response(data={ "message": "added to list", "auth_token": request.headers.get("auth_token"), "data": { "isAdded": True } })
 
 @router.post("/remove_from_list")
 def remove_from_list(request: Request, email: str, slug: str) -> JSONResponse:

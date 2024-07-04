@@ -22,8 +22,8 @@ def auth_middleware(request: Request, callnext):
     url_path = request.url.path
     temp = url_path.split("/")
 
-    if "api" in temp:
-        return mangarealm_router.validator(request=request, callnext=callnext) 
+    # if "api" in temp:
+    #     return mangarealm_router.validator(request=request, callnext=callnext) 
 
     return callnext(request)
 
