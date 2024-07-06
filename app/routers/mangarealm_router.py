@@ -19,13 +19,12 @@ from app.resources.misc import paginate_items
 
 router: APIRouter = APIRouter(prefix="/api")
 
-
 async def validator(*, request: Request, callnext) -> JSONResponse:
 	headers = request.headers
 	auth_token = headers.get("auth_token")
-	
-	if not auth_token:
-		return response.forbidden_response(data={ "message": "bad auth_token" })
+
+	# if not auth_token:
+	# 	return response.forbidden_response(data={ "message": "bad auth_token" })
 
 	parsed_url = urlparse(request.url._url)
 	query_params = parse_qs(parsed_url.query)
@@ -39,8 +38,8 @@ async def validator(*, request: Request, callnext) -> JSONResponse:
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid user"})
 	
-	if user.token != auth_token:
-		return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
+	# if user.token != auth_token:
+	# 	return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
 	
 	user.token = generate_unique_token()
 	res = database.update_user(data=[ ( "token", user.token) ], key="email", entity=email)
@@ -52,9 +51,8 @@ async def validator(*, request: Request, callnext) -> JSONResponse:
 
 	return await callnext(request)
 
-
 @router.post("/profile_details/")
-def profile_details(request: Request, email: str, list_page: str = "1") -> JSONResponse:
+def profile_details(request: Request, email: str, list_page: str = "1", keywords: str = "") -> JSONResponse:
 	page = 1
 
 	try:
@@ -67,20 +65,20 @@ def profile_details(request: Request, email: str, list_page: str = "1") -> JSONR
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid email" })
 
-	profile_data = get_profile_data(user, page=page)
+	profile_data = get_profile_data(user, page=page, keywords=keywords)
+	token = request.state.auth_token 
 	return response.successful_response(data={ 
-		"message": "", 
+		"message": "successfully got the user data", 
 		"data": profile_data, 
-		"auth_token": request.state.auth_token 
+		"auth_token": token
 	})
 
-def get_profile_data(user: User, page: int):
-	data, pagination = paginate_items(data=database.get_list_items(key="useremail", entity=user.email), page=page, limit=20)
+def get_profile_data(user: User, page: int, keywords: str):
+	items = database.get_list_items(key="useremail", entity=user.email, filterWords=keywords)
+	data, pagination = paginate_items(data=items, page=page, limit=20)
 	items = []
 	user_data = user.__dict__
 
-	print("user ===> ", user_data)
-	
 	del user_data["password"]
 	del user_data["token"]
 
@@ -113,7 +111,7 @@ def add_to_list(request: Request, email: str, slug: str) -> JSONResponse:
 	))
 	res = database.add_to_list(list=list_manga)
 
-	if type(res) is tuple:
+	if type(res) is str:
 		conditions = [("useremail", email), ("slug", slug)]
 		database.remove_from_list(conditions=conditions)
 		return response.successful_response(data={ "message": "added to list", "auth_token": request.headers.get("auth_token"), "data": { "isAdded": False } })
@@ -190,7 +188,7 @@ def get_manga(slug: str) -> Optional[Dict[str, Any]]:
 
 	return response.json()["data"]["manga"]
 
-def update_data(attributes: List[Dict[str, Any]], **kwargs) -> bool:
+def update_data(attributes: List[Dict[str, Any]], **kwargs) -> Union[bool, str]:
 	data: List[tuple[str, Any]] = []
 	for item in attributes:
 		data.append((item["key"], item["value"]))

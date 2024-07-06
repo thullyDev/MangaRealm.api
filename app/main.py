@@ -13,8 +13,8 @@ origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=False,
-    allow_methods=["POST", "GET"],
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["Content-Type"],
 )
 
@@ -22,8 +22,8 @@ def auth_middleware(request: Request, callnext):
     url_path = request.url.path
     temp = url_path.split("/")
 
-    # if "api" in temp:
-    #     return mangarealm_router.validator(request=request, callnext=callnext) 
+    if "api" in temp:
+        return mangarealm_router.validator(request=request, callnext=callnext) 
 
     return callnext(request)
 

@@ -7,7 +7,7 @@ from .sequel.postgresDatabase import PostgresDB
 
 psqlDB: PostgresDB = PostgresDB(SQL_URL)  
 
-def update_user(*, key: str, entity: str, data: List[tuple[str, Any]]) -> bool:
+def update_user(*, key: str, entity: str, data: List[tuple[str, Any]]) -> Union[bool, str]:
 	update_data = [f"SET {column} = {repr(value)}" for column, value in data ]
 	update_string = " , ".join(update_data)
 	query = f"""
@@ -17,8 +17,9 @@ def update_user(*, key: str, entity: str, data: List[tuple[str, Any]]) -> bool:
 			""".strip()
 	return psqlDB.execute(query)
 	
-def get_list_items(*, key: str, entity: str) -> List[AddList]:
-	query = f"select * from \"list\" where {key} = '{entity}';"
+def get_list_items(*, key: str, entity: str, filterWords: str = "") -> List[AddList]:
+	searchQuery = "" if filterWords == "" else  f" AND title ILIKE '%{filter}%'"
+	query = f"SELECT * FROM \"list\" WHERE {key} = '{entity}' {searchQuery};"
 	response = psqlDB.fetch(query=query)
 
 	if not response:
@@ -27,7 +28,7 @@ def get_list_items(*, key: str, entity: str) -> List[AddList]:
 	return [AddList(item) for item in response]
 
 def get_user(*, key: str, entity: str) -> Optional[User]:
-	query = f"select * from \"user\" where {key} = '{entity}';"
+	query = f"SELECT * FROM \"user\" WHERE {key} = '{entity}';"
 	response = psqlDB.fetch(query=query)
 
 	if not response:
@@ -35,11 +36,11 @@ def get_user(*, key: str, entity: str) -> Optional[User]:
 
 	return User(response[0])
 
-def set_user(user: SetUser) -> bool: return set_model(model=user, table="user") 
+def set_user(user: SetUser) -> Union[bool, str]: return set_model(model=user, table="user") 
 
-def add_to_list(list: SetList) -> bool: return set_model(model=list, table="list")
+def add_to_list(list: SetList) -> Union[bool, str]: return set_model(model=list, table="list")
 
-def remove_from_list(conditions: List[Tuple[str, Any]]) -> bool:
+def remove_from_list(conditions: List[Tuple[str, Any]]) -> Union[bool, str]:
 	conditions_query = " AND ".join([
 		f"{key} = '{entity}'" 
 		for key, entity in conditions
@@ -50,7 +51,7 @@ def remove_from_list(conditions: List[Tuple[str, Any]]) -> bool:
 			"""
 	return psqlDB.execute(query=query)
 
-def set_model(*, model: Base, table: str) -> bool:
+def set_model(*, model: Base, table: str) -> Union[bool, str]:
 	keys = model.string_tuple("keys").replace("'", '')
 	entities = model.string_tuple("entities").replace("None", "NULL").replace('"', "'")
 	query = f"""

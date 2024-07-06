@@ -7,7 +7,7 @@ class PostgresDB:
 		self.conn = psycopg2.connect(DB_URL)
 		self.cursor = self.conn.cursor()
 
-	def execute(self, query: str, params=None) -> Union[bool, Tuple]:
+	def execute(self, query: str, params=None) -> Union[bool, str]:
 		try:
 			print(params)
 			self.cursor.execute(query=query, vars=params)
@@ -18,9 +18,7 @@ class PostgresDB:
 
 			print("Postgres Error: ", e)
 			if "duplicate" in str(e):
-				return False, "duplicate"
-
-
+				return "duplicate"
 
 			return False
 
