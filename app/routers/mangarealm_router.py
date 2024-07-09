@@ -114,12 +114,12 @@ def add_to_list(request: Request, email: str, slug: str) -> JSONResponse:
 	if type(res) is str:
 		conditions = [("useremail", email), ("slug", slug)]
 		database.remove_from_list(conditions=conditions)
-		return response.successful_response(data={ "message": "added to list", "auth_token": request.headers.get("auth_token"), "data": { "isAdded": False } })
+		return response.successful_response(data={ "message": "added to list", "auth_token": request.state.auth_token, "data": { "isAdded": False } })
 
 	if not res:
 		return response.crash_response(data={ "message": "failed to add to list, may already be in the list" })
 	
-	return response.successful_response(data={ "message": "added to list", "auth_token": request.headers.get("auth_token"), "data": { "isAdded": True } })
+	return response.successful_response(data={ "message": "added to list", "auth_token": request.state.auth_token, "data": { "isAdded": True } })
 
 @router.post("/remove_from_list")
 def remove_from_list(request: Request, email: str, slug: str) -> JSONResponse:
@@ -129,7 +129,7 @@ def remove_from_list(request: Request, email: str, slug: str) -> JSONResponse:
 	if not res:
 		return response.crash_response(data={ "message": "failed to  remove from list, may not be in the list" })
 
-	return response.successful_response(data={ "message": "removed from list", "auth_token": request.headers.get("auth_token") })
+	return response.successful_response(data={ "message": "removed from list", "auth_token": request.state.auth_token })
 
 @router.post("/change_user_info")
 def change_user_info(request: Request, email: str, data: str) -> JSONResponse:
@@ -144,7 +144,7 @@ def change_user_info(request: Request, email: str, data: str) -> JSONResponse:
 	if not res:
 		return response.crash_response(data={ "message": "failed" })
 
-	return response.successful_response(data={ "message": "updated", "auth_token": request.headers.get("auth_token") })
+	return response.successful_response(data={ "message": "updated", "auth_token": request.state.auth_token })
 
 @router.post("/upload_user_profile_image")
 def upload_user_profile_image(request: Request, user, email: str, image: str) -> JSONResponse:
@@ -153,7 +153,7 @@ def upload_user_profile_image(request: Request, user, email: str, image: str) ->
 	profile_image_url = storage.upload_base64_image(name=name, base64Str=base64)
 
 	if not profile_image_url:
-		return response.crash_response(data={ "message": "failed to upload image", "auth_token": request.headers.get("auth_token") })
+		return response.crash_response(data={ "message": "failed to upload image", "auth_token": request.state.auth_token })
 
 	data = { "key": "profile_image_url", "value": profile_image_url }
 	res = update_data([ data ], key="email", entity=email)
