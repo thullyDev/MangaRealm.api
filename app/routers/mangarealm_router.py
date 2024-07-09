@@ -127,7 +127,7 @@ def remove_from_list(request: Request, email: str, slug: str) -> JSONResponse:
 	res = database.remove_from_list(conditions=conditions)
 
 	if not res:
-		return response.crash_response(data={ "message": "failed to  remove from list, may already be in the list" })
+		return response.crash_response(data={ "message": "failed to  remove from list, may not be in the list" })
 
 	return response.successful_response(data={ "message": "removed from list", "auth_token": request.headers.get("auth_token") })
 
@@ -179,6 +179,7 @@ def valid_keys(attributes: List[Dict[str, Any]]) -> Tuple[bool, str]:
 
 	return True, ""
 
+import pprint
 def get_manga(slug: str) -> Optional[Dict[str, Any]]:
 	url = f"{MANGANATO_API_URL}/{slug}"
 	response = requests.get(url)
@@ -186,7 +187,9 @@ def get_manga(slug: str) -> Optional[Dict[str, Any]]:
 	if response.status_code != SUCCESSFUL:
 		return None
 
-	return response.json()["data"]["manga"]
+	data = response.json()["data"]["manga"]
+	pprint.pprint(data)
+	return data
 
 def update_data(attributes: List[Dict[str, Any]], **kwargs) -> Union[bool, str]:
 	data: List[tuple[str, Any]] = []
