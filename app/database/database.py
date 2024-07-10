@@ -15,6 +15,7 @@ def update_user(*, key: str, entity: str, data: List[tuple[str, Any]]) -> Union[
 				{update_string}
 				WHERE {key} = '{entity}';
 			""".strip()
+
 	return psqlDB.execute(query)
 	
 def get_list_items(*, key: str, entity: str, filterWords: str = "") -> List[AddList]:

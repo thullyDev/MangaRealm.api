@@ -1,5 +1,5 @@
 import ast
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 import uuid
 import hashlib
 import datetime
@@ -75,7 +75,7 @@ def profile_details(request: Request, email: str, list_page: str = "1", keywords
 
 def get_profile_data(user: User, page: int, keywords: str):
 	items = database.get_list_items(key="useremail", entity=user.email, filterWords=keywords)
-	data, pagination = paginate_items(data=items, page=page, limit=20)
+	data, pagination = paginate_items(data=items, page=page, limit=12)
 	items = []
 	user_data = user.__dict__
 
@@ -147,13 +147,12 @@ def change_user_info(request: Request, email: str, data: str) -> JSONResponse:
 	return response.successful_response(data={ "message": "updated", "auth_token": request.state.auth_token })
 
 @router.post("/upload_user_profile_image")
-def upload_user_profile_image(request: Request, user, email: str, image: str) -> JSONResponse:
-	#! image should be a base64 image
-	name, base64 = process_image(image, user.username)
+def upload_user_profile_image(request: Request, email: str, username: str, image: str) -> JSONResponse:
+	name, base64 = process_image(image, username)
 	profile_image_url = storage.upload_base64_image(name=name, base64Str=base64)
 
 	if not profile_image_url:
-		return response.crash_response(data={ "message": "failed to upload image", "auth_token": request.state.auth_token })
+		return response.crash_response(data={ "message": "failed to upload image" })
 
 	data = { "key": "profile_image_url", "value": profile_image_url }
 	res = update_data([ data ], key="email", entity=email)
@@ -161,7 +160,7 @@ def upload_user_profile_image(request: Request, user, email: str, image: str) ->
 	if not res:
 		return response.crash_response(data={ "message": "failed" })
 
-	return response.successful_response(data={ "message": "updated" })
+	return response.successful_response(data={ "message": "updated", "auth_token": request.state.auth_token })
 
 def valid_keys(attributes: List[Dict[str, Any]]) -> Tuple[bool, str]:
 	keys = [ "email", "profile_image_url", "username", "password" "deleted" ]
@@ -179,7 +178,6 @@ def valid_keys(attributes: List[Dict[str, Any]]) -> Tuple[bool, str]:
 
 	return True, ""
 
-import pprint
 def get_manga(slug: str) -> Optional[Dict[str, Any]]:
 	url = f"{MANGANATO_API_URL}/{slug}"
 	response = requests.get(url)
@@ -188,7 +186,6 @@ def get_manga(slug: str) -> Optional[Dict[str, Any]]:
 		return None
 
 	data = response.json()["data"]["manga"]
-	pprint.pprint(data)
 	return data
 
 def update_data(attributes: List[Dict[str, Any]], **kwargs) -> Union[bool, str]:
@@ -200,6 +197,7 @@ def update_data(attributes: List[Dict[str, Any]], **kwargs) -> Union[bool, str]:
 def process_image(image: str, username: str):
 	current_time = datetime.datetime.now().strftime("%d-%m-%Y-%w-%d-%H-%M-%S-%f")
 	name = f"{username}-{current_time}"
+
 	return name, image.replace("data:image/jpeg;base64,", "").replace("data:image/png;base64,", "")
 
 def generate_unique_token(length: int = 250) -> str:
