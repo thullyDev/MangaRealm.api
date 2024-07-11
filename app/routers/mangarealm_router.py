@@ -158,10 +158,24 @@ def upload_user_profile_image(request: Request, email: str, username: str, image
 	res = update_data([ data ], key="email", entity=email)
 
 	if not res:
-		return response.crash_response(data={ "message": "failed" })
+		return response.crash_response(data={ "message": "failed" })	
 
-	data = { "profile_image_url": profile_image_url }
-	return response.successful_response(data={ "message": "updated", "auth_token": request.state.auth_token, "data": data})
+	user = database.get_user(key="email", entity=email)
+
+	if not user:
+		return response.forbidden_response(data={ "message": "invalid email" })
+
+
+	token = request.state.auth_token
+
+	data = { 
+		"username": user.username,
+		"email": user.email,
+		"token": token,
+		"profile_image_url": profile_image_url
+	 }
+
+	return response.successful_response(data={ "message": "updated", "auth_token": token, "data": data})
 
 def valid_keys(attributes: List[Dict[str, Any]]) -> Tuple[bool, str]:
 	keys = [ "email", "profile_image_url", "username", "password" "deleted" ]
