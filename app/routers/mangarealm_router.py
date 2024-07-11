@@ -143,7 +143,7 @@ def change_user_info(request: Request, email: str, data: str) -> JSONResponse:
 
 	if not res:
 		return response.crash_response(data={ "message": "failed" })
-
+		
 	return response.successful_response(data={ "message": "updated", "auth_token": request.state.auth_token })
 
 @router.post("/upload_user_profile_image")
@@ -160,7 +160,8 @@ def upload_user_profile_image(request: Request, email: str, username: str, image
 	if not res:
 		return response.crash_response(data={ "message": "failed" })
 
-	return response.successful_response(data={ "message": "updated", "auth_token": request.state.auth_token })
+	data = { "profile_image_url": profile_image_url }
+	return response.successful_response(data={ "message": "updated", "auth_token": request.state.auth_token, "data": data})
 
 def valid_keys(attributes: List[Dict[str, Any]]) -> Tuple[bool, str]:
 	keys = [ "email", "profile_image_url", "username", "password" "deleted" ]
