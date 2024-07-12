@@ -52,6 +52,24 @@ def remove_from_list(conditions: List[Tuple[str, Any]]) -> Union[bool, str]:
 			"""
 	return psqlDB.execute(query=query)
 
+def get_from_list(conditions: List[Tuple[str, Any]]) -> Optional[AddList]:
+	conditions_query = " AND ".join([
+		f"{key} = '{entity}'" 
+		for key, entity in conditions
+	])
+	query = f"""
+				SELECT * FROM "list"
+				WHERE {conditions_query}; 
+			"""
+	response = psqlDB.fetch(query=query)
+
+	if not response:
+		return None
+
+	return AddList(response[0])
+
+
+
 def set_model(*, model: Base, table: str) -> Union[bool, str]:
 	keys = model.string_tuple("keys").replace("'", '')
 	entities = model.string_tuple("entities").replace("None", "NULL").replace('"', "'")

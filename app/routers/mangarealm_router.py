@@ -177,6 +177,20 @@ def upload_user_profile_image(request: Request, email: str, username: str, image
 
 	return response.successful_response(data={ "message": "updated", "auth_token": token, "data": data})
 
+@router.post("/is_in_list/")
+def is_in_list(request: Request, email: str, slug: str) -> JSONResponse:
+	conditions = [("useremail", email), ("slug", slug)]
+	db_response = database.get_from_list(conditions=conditions)
+	isIn = True if db_response else False 
+	profile_data = { "isIn": isIn }
+	token = request.state.auth_token 
+
+	return response.successful_response(data={ 
+		"data": profile_data, 
+		"auth_token": token
+	})
+
+
 def valid_keys(attributes: List[Dict[str, Any]]) -> Tuple[bool, str]:
 	keys = [ "email", "profile_image_url", "username", "password" "deleted" ]
 
