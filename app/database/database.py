@@ -19,7 +19,7 @@ def update_user(*, key: str, entity: str, data: List[tuple[str, Any]]) -> Union[
 	return psqlDB.execute(query)
 	
 def get_list_items(*, key: str, entity: str, filterWords: str = "") -> List[AddList]:
-	searchQuery = "" if filterWords == "" else  f" AND title ILIKE '%{filter}%'"
+	searchQuery = "" if filterWords == "" else  f" AND title ILIKE '%{filterWords}%'"
 	query = f"SELECT * FROM \"list\" WHERE {key} = '{entity}' {searchQuery};"
 	response = psqlDB.fetch(query=query)
 

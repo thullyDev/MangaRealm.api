@@ -65,6 +65,7 @@ def profile_details(request: Request, email: str, list_page: str = "1", keywords
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid email" })
 
+	print(keywords)
 	profile_data = get_profile_data(user, page=page, keywords=keywords)
 	token = request.state.auth_token 
 	return response.successful_response(data={ 
