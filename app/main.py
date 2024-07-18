@@ -7,15 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
-origins = ["*"]
-# origins = ORIGINS.split(",")
+origins = ORIGINS.split(",")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["Content-Type"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "auth_token"],
 )
 
 def auth_middleware(request: Request, callnext):

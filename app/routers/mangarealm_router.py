@@ -23,6 +23,7 @@ async def validator(*, request: Request, callnext) -> JSONResponse:
 	headers = request.headers
 	auth_token = headers.get("auth_token")
 
+
 	# if not auth_token:
 	# 	return response.forbidden_response(data={ "message": "bad auth_token" })
 
@@ -65,7 +66,6 @@ def profile_details(request: Request, email: str, list_page: str = "1", keywords
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid email" })
 
-	print(keywords)
 	profile_data = get_profile_data(user, page=page, keywords=keywords)
 	token = request.state.auth_token 
 	return response.successful_response(data={ 
@@ -97,6 +97,7 @@ def get_profile_data(user: User, page: int, keywords: str):
 
 @router.post("/add_to_list")
 def add_to_list(request: Request, email: str, slug: str) -> JSONResponse:
+	print(" i am here add_to_list")
 	manga = get_manga(slug)
 
 	if not manga:
