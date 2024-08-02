@@ -1,7 +1,6 @@
 from typing import List, Optional, Tuple, Union
 import psycopg2
 
-
 class PostgresDB: 	
 	def __init__(self, DB_URL: str) -> None:
 		self.conn = psycopg2.connect(DB_URL)
@@ -9,7 +8,6 @@ class PostgresDB:
 
 	def execute(self, query: str, params=None) -> Union[bool, str]:
 		try:
-			print(params)
 			self.cursor.execute(query=query, vars=params)
 			self.conn.commit()
 			return True

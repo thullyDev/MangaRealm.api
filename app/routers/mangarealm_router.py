@@ -23,9 +23,8 @@ async def validator(*, request: Request, callnext) -> JSONResponse:
 	headers = request.headers
 	auth_token = headers.get("auth_token")
 
-
-	# if not auth_token:
-	# 	return response.forbidden_response(data={ "message": "bad auth_token" })
+	if not auth_token:
+		return response.forbidden_response(data={ "message": "bad auth_token" })
 
 	parsed_url = urlparse(request.url._url)
 	query_params = parse_qs(parsed_url.query)
@@ -39,8 +38,8 @@ async def validator(*, request: Request, callnext) -> JSONResponse:
 	if not user:
 		return response.forbidden_response(data={ "message": "invalid user"})
 	
-	# if user.token != auth_token:
-	# 	return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
+	if user.token != auth_token:
+		return response.forbidden_response(data={ "message": "user not up to date with the auth_token, so they should authenticate first"})
 	
 	user.token = generate_unique_token()
 	res = database.update_user(data=[ ( "token", user.token) ], key="email", entity=email)
@@ -97,7 +96,6 @@ def get_profile_data(user: User, page: int, keywords: str):
 
 @router.post("/add_to_list")
 def add_to_list(request: Request, email: str, slug: str) -> JSONResponse:
-	print(" i am here add_to_list")
 	manga = get_manga(slug)
 
 	if not manga:
